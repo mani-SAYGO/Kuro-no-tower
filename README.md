@@ -1,2 +1,5 @@
-# Kuro-no-tower
-Kuro no tower — AI Game Maker で作った3Dゲーム
+# Kuro no tower
+
+AI Game Maker で作ったブラウザゲームです。
+
+▶ プレイ: https://mani-saygo.github.io/Kuro-no-tower/
