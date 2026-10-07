@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>黒猫めいろタワー</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-user-select:none}
+body{overflow:hidden;background:#1a1530;font-family:"Hiragino Maru Gothic ProN",sans-serif;color:#fff;touch-action:none}
+#hud{position:fixed;top:10px;left:10px;right:200px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;pointer-events:none;z-index:5}
+.pill{background:rgba(20,15,40,.75);padding:5px 11px;border-radius:20px;font-size:14px;font-weight:bold;border:2px solid rgba(255,255,255,.15)}
+#hpbar{display:inline-block;width:80px;height:12px;background:#333;border-radius:6px;vertical-align:middle;overflow:hidden}
+#hpin{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff5f5f,#ffd84a,#6aff9a);transition:width .2s}
+.hb{pointer-events:auto;background:rgba(60,50,120,.85);color:#fff;border:2px solid #fff4;border-radius:20px;padding:5px 11px;font-weight:bold;font-size:14px;cursor:pointer}
+#give{background:rgba(120,40,60,.85)}
+#mapBox{position:fixed;top:10px;right:10px;z-index:5;background:rgba(20,15,40,.8);border-radius:14px;padding:6px;border:2px solid rgba(255,255,255,.2)}
+#mm{display:block;width:170px;height:170px;border-radius:8px}
+#mapBox .row{display:flex;gap:4px;margin-top:4px;align-items:center;justify-content:space-between;font-size:12px}
+#mapBox button{width:34px;height:28px;border-radius:8px;border:none;background:#ffd84a;color:#4a2500;font-weight:bold;font-size:18px;cursor:pointer}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,10,35,.82);z-index:10;text-align:center;padding:20px;overflow:auto}
+#pause{background:rgba(3,2,10,.96)}
+.screen h1{font-size:38px;color:#ffd84a;text-shadow:0 4px 0 #8a4b00;margin-bottom:12px}
+.screen p{margin:4px 0;line-height:1.6}
+.btn{margin-top:14px;padding:12px 36px;font-size:22px;font-weight:bold;border:none;border-radius:40px;background:linear-gradient(#ffd84a,#ff9a2e);color:#4a2500;cursor:pointer;box-shadow:0 5px 0 #a35400}
+input{font-size:18px;padding:8px 12px;border-radius:12px;border:none;text-align:center;width:200px;margin-top:8px}
+table{margin-top:8px;border-collapse:collapse;font-size:13px;background:rgba(255,255,255,.08)}
+td,th{padding:4px 8px}th{color:#ffd84a}tr.me{background:rgba(255,95,162,.45)}
+.hidden{display:none!important}
+#pad{position:fixed;bottom:20px;left:20px;width:160px;height:160px;z-index:6}
+#pad button,.act{position:absolute;width:54px;height:54px;border-radius:14px;border:2px solid rgba(255,255,255,.4);background:rgba(255,255,255,.18);color:#fff;font-size:22px;touch-action:none}
+#bu{left:53px;top:0}#bd{left:53px;bottom:0}#bl{left:0;top:53px}#br{right:0;top:53px}
+.act{position:fixed;right:20px;width:84px;height:84px;border-radius:50%;font-size:14px;font-weight:bold;z-index:6}
+#jup{bottom:120px;background:rgba(255,95,162,.55)}#jdn{bottom:24px;background:rgba(90,140,255,.55)}
+#msg{position:fixed;top:38%;width:100%;text-align:center;font-size:32px;font-weight:bold;color:#ffd84a;text-shadow:0 3px 0 #8a4b00;z-index:7;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="hud">
+<div class="pill" id="flr">1F</div>
+<div class="pill">🏔 最高 <span id="maxf">1</span>F</div>
+<div class="pill">❤ <span id="hpbar"><span id="hpin"></span></span> <span id="hp">100</span></div>
+<div class="pill">🥫 <span id="cans">0</span></div>
+<div class="pill">🍡 <span id="ch">0</span></div>
+<div class="pill">⏱ <span id="time">0.0</span>秒</div>
+<button class="hb" id="pauseBtn">⏸</button>
+<button class="hb" id="give">ギブアップ</button>
+</div>
+<div id="mapBox"><canvas id="mm" width="170" height="170"></canvas>
+<div class="row"><button id="zout">−</button><span id="mapF">1F マップ</span><button id="zin">＋</button></div></div>
+<div id="msg"></div>
+<div id="pad"><button id="bu">▲</button><button id="bd">▼</button><button id="bl">◀</button><button id="br">▶</button></div>
+<button class="act" id="jup">↑上の階<br>ちゅるる</button>
+<button class="act" id="jdn">↓下の階</button>
+<div id="start" class="screen">
+<h1>🐈‍⬛ 黒猫めいろタワー</h1>
+<p>5階のゴールを目指そう！ 歩くと体力が減るよ。猫缶🥫で回復！</p>
+<p>🍡ちゅるる1本で上の階へジャンプ。下の階へはいつでも降りられる</p>
+<p>ちゅるるの多くは閉じた小部屋の中…上の階から飛び降りて取ろう（ピンクの輪が目印）</p>
+<p>🐭ねずみロボット（2F〜）に触れると目が回って体力ダウン！</p>
+<p style="font-size:14px;color:#ffd84a">スコア＝到達階×1000＋ゴール3000＋猫缶×100＋ちゅるる×300＋タイムボーナス</p>
+<p style="opacity:.8;font-size:13px">移動：矢印/WASD　上：スペース　下：Q/Shift　一時停止：P/Esc</p>
+<input id="name" maxlength="10" value="くろねこ" placeholder="なまえ">
+<button class="btn" id="startBtn">スタート</button>
+<div id="rank1"></div>
+</div>
+<div id="pause" class="screen hidden"><h1>⏸ 一時停止中</h1><p>迷路はおやすみ中…にゃ</p><button class="btn" id="resumeBtn">つづける</button></div>
+<div id="over" class="screen hidden">
+<h1 id="overTitle">ゴール！</h1>
+<p id="overText"></p>
+<div id="rank2"></div>
+<button class="btn" id="retryBtn">もう一度</button>
+</div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+const $=id=>document.getElementById(id);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x2a2050);scene.fog=new THREE.Fog(0x2a2050,14,32);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,100);
+scene.add(new THREE.HemisphereLight(0xc8b8ff,0x403060,0.9));
+const sun=new THREE.DirectionalLight(0xfff0d0,1.6);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+Object.assign(sun.shadow.camera,{left:-12,right:12,top:12,bottom:-12,near:1,far:40});scene.add(sun,sun.target);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+
+let ac,mouthT=0;
+function beep(f,d=0.12,type='sine',f2=f,vol=0.2,delay=0){if(!ac)return;const t=ac.currentTime+delay,o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+d);o.connect(g).connect(ac.destination);o.start(t);o.stop(t+d)}
+// 鳴き声: p=高さ, d=長さ, peak=上がり具合, end=語尾, delay
+function meow(p=1,d=0.4,peak=1.6,end=0.8,delay=0,vol=0.16){if(!ac)return;const t=ac.currentTime+delay,o=ac.createOscillator(),bp=ac.createBiquadFilter(),bp2=ac.createBiquadFilter(),g=ac.createGain(),lfo=ac.createOscillator(),lg=ac.createGain();
+o.type='sawtooth';const f=520*p;o.frequency.setValueAtTime(f,t);o.frequency.linearRampToValueAtTime(f*peak,t+d*0.3);o.frequency.linearRampToValueAtTime(f*end,t+d);
+lfo.frequency.value=7;lg.gain.value=f*0.03;lfo.connect(lg).connect(o.frequency);
+bp.type='bandpass';bp.Q.value=3;bp.frequency.setValueAtTime(800,t);bp.frequency.linearRampToValueAtTime(1800,t+d*0.3);bp.frequency.linearRampToValueAtTime(900,t+d);
+bp2.type='bandpass';bp2.Q.value=4;bp2.frequency.value=2800;
+g.gain.setValueAtTime(0.001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.04);g.gain.setValueAtTime(vol,t+d*0.6);g.gain.exponentialRampToValueAtTime(0.001,t+d);
+o.connect(bp).connect(g);o.connect(bp2).connect(g);g.connect(ac.destination);o.start(t);lfo.start(t);o.stop(t+d);lfo.stop(t+d);
+setTimeout(()=>mouthT=Math.max(mouthT,d),delay*1000)}
+const sfx={step:()=>beep(220,0.05,'triangle',180,0.05),can:()=>{beep(880,0.08,'square',880,0.08);beep(1320,0.15,'square',1320,0.08,0.07)},
+ch:()=>[660,880,1100].forEach((f,i)=>beep(f,0.12,'sine',f,0.15,i*0.06)),up:()=>beep(300,0.5,'sine',1200,0.2),down:()=>beep(900,0.5,'sine',200,0.18),
+bump:()=>beep(120,0.1,'sawtooth',80,0.08),goal:()=>[523,659,784,1047,1319].forEach((f,i)=>beep(f,0.3,'triangle',f,0.18,i*0.1)),
+hit:()=>{for(let i=0;i<5;i++)beep(600-i*80,0.1,'square',400-i*60,0.07,i*0.08)},
+over:()=>beep(400,0.7,'triangle',100,0.2),pause:()=>beep(500,0.1,'sine',350,0.12),rec:()=>[784,988,1175].forEach((f,i)=>beep(f,0.15,'triangle',f,0.15,i*0.08))};
+const nya={start:()=>meow(1,0.45),happy:()=>meow(1.3,0.22,1.4,1.1,0.05),churu:()=>{meow(1.3,0.18,1.3,1.2,0.05);meow(1.4,0.3,1.5,1,0.25)},
+jump:()=>meow(1.2,0.35,2,1.5),down:()=>meow(1.1,0.25,1.2,0.7),hit:()=>meow(1.5,0.3,1.1,0.6,0,0.2),
+bump:()=>meow(1.4,0.12,1.2,1.3),sad:()=>meow(0.75,0.8,1.2,0.5),goal:()=>{meow(1.2,0.25,1.4,1.2,0.3);meow(1.3,0.7,1.8,0.9,0.6)},idle:()=>meow(0.95,0.7,1.5,0.7)};
+
+function canvasTex(draw,w=64,h=64){const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'));const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t}
+const wallTex=canvasTex(g=>{g.fillStyle='#bbb';g.fillRect(0,0,64,64);g.fillStyle='#fff';for(let y=0;y<4;y++)for(let x=0;x<3;x++)g.fillRect(x*32+(y%2)*16-14,y*16+2,28,12)});
+const floorTex=canvasTex(g=>{for(let y=0;y<2;y++)for(let x=0;x<2;x++){g.fillStyle=(x+y)%2?'#fff':'#ddd';g.fillRect(x*32,y*32,32,32)}});
+floorTex.wrapS=floorTex.wrapT=THREE.RepeatWrapping;floorTex.magFilter=THREE.NearestFilter;
+const labelTex=canvasTex(g=>{g.fillStyle='#ff7a3a';g.fillRect(0,0,128,64);g.fillStyle='#fff';g.font='bold 30px sans-serif';g.fillText('🐟 NYA',8,44)},128,64);
+const FL=5,N=7,W=N*2+1;
+const wallCols=[0x9a7ae0,0x6ab0e0,0x6ad0a0,0xe0b06a,0xe07aa0],floorCols=[0xf2d9b0,0xd8e8f8,0xd8f2d8,0xf8ecd0,0xf8d8e4],bgCols=[0x2a2050,0x1a3050,0x1a3a30,0x40301a,0x401a30];
+const wallCss=wallCols.map(c=>'#'+c.toString(16).padStart(6,'0'));
+const wallGeo=new THREE.BoxGeometry(1,1.2,1);
+const wallMats=wallCols.map(c=>new THREE.MeshStandardMaterial({map:wallTex,color:c,roughness:0.8}));
+const floorMat=new THREE.MeshStandardMaterial({map:floorTex});
+floorTex.repeat.set((W+20)/2,(W+20)/2);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(W+20,W+20),floorMat);floor.rotation.x=-Math.PI/2;floor.position.set(W/2-0.5,0,W/2-0.5);floor.receiveShadow=true;scene.add(floor);
+const canGeo=new THREE.CylinderGeometry(0.22,0.22,0.22,20);
+const silver=new THREE.MeshStandardMaterial({color:0xdddddd,metalness:0.9,roughness:0.25});
+const canMats=[new THREE.MeshStandardMaterial({map:labelTex,metalness:0.3,roughness:0.4}),silver,silver];
+const stickGeo=new THREE.CylinderGeometry(0.07,0.07,0.6,10),stickMat=new THREE.MeshStandardMaterial({color:0xff5fa2,emissive:0xff2a80,emissiveIntensity:0.5});
+const ringGeo=new THREE.TorusGeometry(0.38,0.04,8,28),ringMat=new THREE.MeshBasicMaterial({color:0xff5fa2,transparent:true,opacity:0.7});
+
+// アニメ調の黒猫
+const grad=new THREE.DataTexture(new Uint8Array([90,90,90,255,170,170,170,255,255,255,255,255]),3,1);
+grad.minFilter=grad.magFilter=THREE.NearestFilter;grad.needsUpdate=true;
+const toon=c=>new THREE.MeshToonMaterial({color:c,gradientMap:grad});
+const outM=new THREE.MeshBasicMaterial({color:0x05050a,side:THREE.BackSide});
+const add=(geo,mat,x,y,z,p,s=[1,1,1],ol=0)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(...s);m.castShadow=true;
+if(ol){const o=new THREE.Mesh(geo,outM);o.scale.setScalar(1+ol);m.add(o)}p.add(m);return m};
+const cat=new THREE.Group();scene.add(cat);const catBody=new THREE.Group();cat.add(catBody);
+const blk=toon(0x34344e),pinkT=toon(0xff9ec0),basic=c=>new THREE.MeshBasicMaterial({color:c});
+const white=basic(0xffffff),iris=basic(0xffc93a),pupil=basic(0x111111),blushM=new THREE.MeshBasicMaterial({color:0xff7aa8,transparent:true,opacity:0.6});
+const lineM=basic(0xfff2c0);
+add(new THREE.SphereGeometry(0.25,20,16),blk,0,0.3,-0.05,catBody,[1,0.9,1.3],0.06);
+const head=add(new THREE.SphereGeometry(0.3,24,18),blk,0,0.72,0.2,catBody,[1.08,0.95,1],0.05);
+const earG=new THREE.ConeGeometry(0.12,0.24,4),earIn=new THREE.ConeGeometry(0.07,0.15,4),ears=[];
+for(const s of[-1,1]){const e=add(earG,blk,s*0.17,0.27,-0.02,head,[1,1,0.6],0.08);e.rotation.z=-s*0.35;e.userData.base=-s*0.35;add(earIn,pinkT,0,-0.02,0.05,e,[1,1,0.5]);ears.push(e)}
+const eyes=[],sphG=new THREE.SphereGeometry(1,14,10);
+const happyG=new THREE.TorusGeometry(0.055,0.014,6,14,Math.PI),barG=new THREE.BoxGeometry(0.09,0.02,0.02);
+for(const s of[-1,1]){const eg=new THREE.Group();eg.position.set(s*0.11,0.03,0.25);head.add(eg);
+const n=new THREE.Group();eg.add(n);
+add(sphG,white,0,0,0,n,[0.085,0.105,0.045]);add(sphG,iris,0,-0.005,0.02,n,[0.066,0.088,0.035]);
+const pu=add(sphG,pupil,0,-0.005,0.04,n,[0.03,0.06,0.02]);add(sphG,white,s*0.022,0.035,0.06,n,[0.022,0.022,0.01]);add(sphG,white,-s*0.02,-0.04,0.06,n,[0.01,0.01,0.01]);
+const h=add(happyG,lineM,0,-0.02,0.04,eg);
+const x=new THREE.Group();x.position.z=0.04;eg.add(x);
+const a=add(barG,lineM,0,0.022,0,x),b=add(barG,lineM,0,-0.022,0,x);a.rotation.z=s*0.5;b.rotation.z=-s*0.5;
+const brow=add(barG,pupil,s*0.01,0.13,0.02,eg);brow.rotation.z=s*0.4;
+eyes.push({eg,n,h,x,pu,brow})}
+add(sphG,pinkT,0,-0.06,0.3,head,[0.025,0.018,0.015]);
+const arc=new THREE.TorusGeometry(0.025,0.007,6,12,Math.PI),wMouth=new THREE.Group();head.add(wMouth);
+for(const s of[-1,1])add(arc,pupil,s*0.025,-0.085,0.29,wMouth).rotation.z=Math.PI;
+const oMouth=add(sphG,toon(0xc0304a),0,-0.1,0.285,head,[0.04,0.035,0.02]);
+const blush=[];for(const s of[-1,1])blush.push(add(sphG,blushM,s*0.19,-0.06,0.22,head,[0.05,0.03,0.02]));
+const sweat=add(new THREE.SphereGeometry(0.04,10,8),new THREE.MeshBasicMaterial({color:0x7ad0ff,transparent:true,opacity:0.85}),0.3,0.12,0.12,head,[0.8,1.3,0.8]);
+const stars=new THREE.Group();stars.position.y=1.15;catBody.add(stars);
+const starG=new THREE.OctahedronGeometry(0.07,0),starM=basic(0xffe14a);
+for(let i=0;i<3;i++){const a=i*Math.PI*2/3;add(starG,starM,Math.cos(a)*0.3,0,Math.sin(a)*0.3,stars)}
+const whG=new THREE.CylinderGeometry(0.005,0.005,0.2,4),whM=basic(0xdddddd);
+for(const s of[-1,1])for(const t of[-0.15,0.1])add(whG,whM,s*0.27,-0.06+t*0.15,0.2,head).rotation.z=Math.PI/2+s*t;
+add(new THREE.TorusGeometry(0.16,0.03,8,20),toon(0xff3a5a),0,0.48,0.12,catBody).rotation.x=Math.PI/2.4;
+add(new THREE.SphereGeometry(0.045,10,8),toon(0xffd84a),0,0.42,0.28,catBody,[1,1,1],0.15);
+const legG=new THREE.CylinderGeometry(0.065,0.07,0.2,8),pawG=new THREE.SphereGeometry(0.075,10,8),legs=[];
+for(const[x,z]of[[-0.13,0.18],[0.13,0.18],[-0.13,-0.25],[0.13,-0.25]]){const l=add(legG,blk,x,0.1,z,catBody,[1,1,1],0.1);add(pawG,blk,0,-0.08,0.02,l,[1,0.7,1.1]);legs.push(l)}
+const tail=new THREE.Group();tail.position.set(0,0.35,-0.36);catBody.add(tail);
+const t1=add(new THREE.CylinderGeometry(0.04,0.055,0.4,8),blk,0,0.15,-0.08,tail,[1,1,1],0.12);t1.rotation.x=-0.6;
+add(new THREE.SphereGeometry(0.05,8,6),blk,0,0.22,0,t1,[1,1,1],0.12);
+const shadowDisc=new THREE.Mesh(new THREE.CircleGeometry(0.35,20),new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:0.3}));
+shadowDisc.rotation.x=-Math.PI/2;shadowDisc.position.y=0.02;cat.add(shadowDisc);
+let expr='normal',exprT=0;const setExpr=(e,d)=>{expr=e;exprT=d};
+
+// ねずみロボット
+const robotT=new THREE.Group();
+const metal=new THREE.MeshStandardMaterial({color:0x9aa3b5,metalness:0.7,roughness:0.3});
+const pinkM=new THREE.MeshStandardMaterial({color:0xff9ab8}),redM=new THREE.MeshStandardMaterial({color:0xff2020,emissive:0xff0000,emissiveIntensity:1});
+add(new THREE.SphereGeometry(0.22,16,12),metal,0,0.2,0,robotT,[1,0.8,1.4]);
+const rEar=new THREE.CylinderGeometry(0.09,0.09,0.03,14);
+add(rEar,pinkM,-0.12,0.38,0.12,robotT).rotation.x=Math.PI/2;add(rEar,pinkM,0.12,0.38,0.12,robotT).rotation.x=Math.PI/2;
+const rEye=new THREE.SphereGeometry(0.04,8,6);add(rEye,redM,-0.07,0.27,0.26,robotT);add(rEye,redM,0.07,0.27,0.26,robotT);
+add(new THREE.CylinderGeometry(0.015,0.015,0.4,6),metal,0,0.15,-0.45,robotT).rotation.x=1.2;
+add(new THREE.CylinderGeometry(0.01,0.01,0.2,6),metal,0,0.45,0,robotT);add(new THREE.SphereGeometry(0.035,8,6),redM,0,0.56,0,robotT);
+
+const goal=new THREE.Group();scene.add(goal);
+const goalRing=new THREE.Mesh(new THREE.TorusGeometry(0.4,0.06,10,32),new THREE.MeshStandardMaterial({color:0x6affc8,emissive:0x2affa0,emissiveIntensity:1}));
+goalRing.rotation.x=-Math.PI/2;goalRing.position.y=0.05;goal.add(goalRing);
+const beam=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.35,4,24,1,true),new THREE.MeshBasicMaterial({color:0x6affc8,transparent:true,opacity:0.18,side:THREE.DoubleSide,depthWrite:false}));
+beam.position.y=2;goal.add(beam);const gl=new THREE.PointLight(0x6affc8,3,5);gl.position.y=1;goal.add(gl);
+
+const pGeo=new THREE.SphereGeometry(0.06,6,4),parts=[];
+for(let i=0;i<90;i++){const m=new THREE.Mesh(pGeo,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true}));m.visible=false;scene.add(m);parts.push({m,v:new THREE.Vector3(),life:0})}
+function burst(x,y,z,color,n=16){let c=0;for(const p of parts){if(p.life>0)continue;p.m.visible=true;p.m.position.set(x,y,z);p.m.material.color.setHex(color);p.v.set((Math.random()-.5)*4,Math.random()*4+1,(Math.random()-.5)*4);p.life=1;if(++c>=n)break}}
+
+const MAXHP=100,STEP=1;
+let grids=[],wallMeshes=[],items=[],robots=[],markers=[],pockets=[],state='title',floorNo=0,maxFloor=0,hp=MAXHP,cans=0,churu=0,elapsed=0,anim=0,invul=0,spinT=0,trans=null,blinkT=2,idleT=0;
+const ranking=[];let lastEntry=null;
+const mv={gx:1,gy:1,fx:1,fy:1,tx:1,ty:1,t:1,face:0,bumpT:0};
+function genMaze(){const g=Array.from({length:W},()=>Array(W).fill(1));const st=[[1,1]];g[1][1]=0;
+while(st.length){const[x,y]=st[st.length-1];const d=[[2,0],[-2,0],[0,2],[0,-2]].filter(([dx,dy])=>{const nx=x+dx,ny=y+dy;return nx>0&&ny>0&&nx<W-1&&ny<W-1&&g[ny][nx]});
+if(!d.length){st.pop();continue}const[dx,dy]=d[Math.random()*d.length|0];g[y+dy/2][x+dx/2]=0;g[y+dy][x+dx]=0;st.push([x+dx,y+dy])}
+for(let i=0;i<4;i++){const x=2+2*(Math.random()*(N-1)|0)+(Math.random()<.5?1:0),y=x%2?2+2*(Math.random()*(N-1)|0):1+2*(Math.random()*N|0);if(x<W-1&&y<W-1)g[y][x]=0}
+return g}
+const D4=[[1,0],[-1,0],[0,1],[0,-1]];
+function makeChuru(n){const g=new THREE.Group();for(let i=0;i<n;i++){const s=new THREE.Mesh(stickGeo,stickMat);s.rotation.z=0.5-i;s.position.x=(i-(n-1)/2)*0.2;s.castShadow=true;g.add(s)}return g}
+function build(){
+for(const m of wallMeshes){scene.remove(m);m.dispose()}for(const o of[...items,...robots,...markers])scene.remove(o.mesh);
+wallMeshes=[];items=[];robots=[];markers=[];grids=[];pockets=[];
+for(let f=0;f<FL;f++){const g=genMaze();
+if(f<3){const leaves=[];for(let y=1;y<W-1;y+=2)for(let x=1;x<W-1;x+=2){if(x+y<6||(x===W-2&&y===W-2))continue;if(D4.filter(([dx,dy])=>!g[y+dy][x+dx]).length===1)leaves.push([x,y])}
+const[px,py]=leaves[Math.random()*leaves.length|0];for(const[dx,dy]of D4)g[py+dy][px+dx]=1;pockets[f]=[px,py]}
+grids.push(g);
+let cnt=0;for(const r of g)for(const v of r)cnt+=v;
+const im=new THREE.InstancedMesh(wallGeo,wallMats[f],cnt);im.castShadow=im.receiveShadow=true;const mt=new THREE.Matrix4();let k=0;
+for(let y=0;y<W;y++)for(let x=0;x<W;x++)if(g[y][x]){mt.makeTranslation(x,0.6,y);im.setMatrixAt(k++,mt)}
+scene.add(im);wallMeshes.push(im);
+const free=[];for(let y=1;y<W-1;y+=2)for(let x=1;x<W-1;x+=2){if(pockets[f]&&pockets[f][0]===x&&pockets[f][1]===y)continue;if(x+y<5)continue;if(f===4&&x===W-2&&y===W-2)continue;free.push([x,y])}
+free.sort(()=>Math.random()-.5);
+const put=(type,amt,x,y)=>{const mesh=type==='can'?new THREE.Mesh(canGeo,canMats):makeChuru(amt);mesh.castShadow=true;mesh.position.set(x,0.4,y);scene.add(mesh);items.push({mesh,f,x,y,type,amt,off:Math.random()*6})};
+for(let i=0;i<5;i++)put('can',1,...free.pop());
+if(f===0){put('ch',1,...free.pop());put('ch',1,...free.pop())}
+if(pockets[f]){put('ch',2,...pockets[f]);const r=new THREE.Mesh(ringGeo,ringMat);r.rotation.x=-Math.PI/2;r.position.set(pockets[f][0],0.03,pockets[f][1]);scene.add(r);markers.push({mesh:r,f:f+1,x:pockets[f][0],y:pockets[f][1],item:items[items.length-1]})}
+const nr=f===0?0:f<3?1:2;for(let i=0;i<nr;i++){const[x,y]=free.pop();const mesh=robotT.clone();mesh.position.set(x,0,y);scene.add(mesh);robots.push({mesh,f,gx:x,gy:y,fx:x,fy:y,t:1,dx:0,dy:0})}}
+goal.position.set(W-2,0,W-2);
+floorNo=0;maxFloor=0;cat.position.set(1,0,1);catBody.position.y=0;catBody.rotation.set(0,0,0);
+Object.assign(mv,{gx:1,gy:1,fx:1,fy:1,tx:1,ty:1,t:1});hp=MAXHP;cans=0;churu=0;elapsed=0;invul=0;spinT=0;trans=null;idleT=0;setExpr('normal',0);
+setFloorVis();updateHUD()}
+function setFloorVis(){wallMeshes.forEach((m,f)=>m.visible=f===floorNo);
+for(const it of items)it.mesh.visible=it.f===floorNo;for(const r of robots)r.mesh.visible=r.f===floorNo;
+for(const m of markers)m.mesh.visible=m.f===floorNo&&items.includes(m.item);
+goal.visible=floorNo===4;floorMat.color.setHex(floorCols[floorNo]);scene.background.setHex(bgCols[floorNo]);scene.fog.color.setHex(bgCols[floorNo]);
+$('flr').textContent=(floorNo+1)+'F';$('mapF').textContent=(floorNo+1)+'F マップ'}
+
+const mm=$('mm'),mg=mm.getContext('2d');let zoom=9;
+const setZoom=z=>zoom=Math.max(3,Math.min(26,z));
+$('zin').onclick=()=>setZoom(zoom*1.3);$('zout').onclick=()=>setZoom(zoom/1.3);
+mm.addEventListener('wheel',e=>{e.preventDefault();setZoom(zoom*(e.deltaY<0?1.15:1/1.15))},{passive:false});
+function drawMap(){const S=mm.width,g=grids[floorNo];mg.fillStyle='#14102a';mg.fillRect(0,0,S,S);if(!g)return;
+const cx=cat.position.x,cz=cat.position.z,P=(v,c)=>S/2+(v-c)*zoom;
+mg.fillStyle='#'+floorCols[floorNo].toString(16).padStart(6,'0');mg.fillRect(P(-0.5,cx),P(-0.5,cz),W*zoom,W*zoom);
+mg.fillStyle=wallCss[floorNo];for(let y=0;y<W;y++)for(let x=0;x<W;x++)if(g[y][x])mg.fillRect(P(x-0.5,cx),P(y-0.5,cz),zoom+0.5,zoom+0.5);
+const dot=(x,y,c,r)=>{mg.fillStyle=c;mg.beginPath();mg.arc(P(x,cx),P(y,cz),Math.max(2,zoom*r),0,7);mg.fill()};
+for(const m of markers)if(m.mesh.visible){mg.strokeStyle='#ff5fa2';mg.lineWidth=2;mg.beginPath();mg.arc(P(m.x,cx),P(m.y,cz),Math.max(3,zoom*0.4),0,7);mg.stroke()}
+for(const it of items)if(it.f===floorNo)dot(it.x,it.y,it.type==='can'?'#ff9a2e':'#ff5fa2',0.25);
+if(floorNo===4)dot(W-2,W-2,'#2affa0',0.4);
+for(const r of robots)if(r.f===floorNo)dot(r.mesh.position.x,r.mesh.position.z,'#ff2020',0.3);
+mg.save();mg.translate(S/2,S/2);mg.rotate(-cat.rotation.y+Math.PI);const k=Math.max(4,zoom*0.45);
+mg.fillStyle='#ffd84a';mg.strokeStyle='#000';mg.lineWidth=1.5;mg.beginPath();mg.moveTo(0,-k);mg.lineTo(k*0.75,k*0.7);mg.lineTo(-k*0.75,k*0.7);mg.closePath();mg.fill();mg.stroke();mg.restore()}
+
+const held={};
+const keyDir={ArrowUp:[0,-1],KeyW:[0,-1],ArrowDown:[0,1],KeyS:[0,1],ArrowLeft:[-1,0],KeyA:[-1,0],ArrowRight:[1,0],KeyD:[1,0]};
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(keyDir[e.code]){held[e.code]=1;e.preventDefault()}
+if(e.repeat)return;if(e.code==='KeyP'||e.code==='Escape')togglePause();
+if(e.code==='Space'){e.preventDefault();tryUp()}if(e.code==='KeyQ'||e.code.startsWith('Shift'))tryDown()});
+addEventListener('keyup',e=>{delete held[e.code]});
+const touchDir={bu:[0,-1],bd:[0,1],bl:[-1,0],br:[1,0]};
+for(const id in touchDir){const b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();held[id]=1});['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>delete held[id]))}
+$('jup').addEventListener('pointerdown',e=>{e.preventDefault();tryUp()});$('jdn').addEventListener('pointerdown',e=>{e.preventDefault();tryDown()});
+$('give').onclick=()=>{if(state==='play')finish(false,'ギブアップ…')};
+$('pauseBtn').onclick=togglePause;$('resumeBtn').onclick=togglePause;
+function togglePause(){if(state==='play'){state='pause';$('pause').classList.remove('hidden');$('mapBox').classList.add('hidden')}
+else if(state==='pause'){state='play';$('pause').classList.add('hidden');$('mapBox').classList.remove('hidden');clock.getDelta()}else return;
+for(const k in held)delete held[k];sfx.pause()}
+function curDir(){for(const k in held){if(keyDir[k])return keyDir[k];if(touchDir[k])return touchDir[k]}return null}
+const busy=()=>state!=='play'||mv.t<1||trans||spinT>0;
+
+function tryMove(dx,dy){const g=grids[floorNo],nx=mv.gx+dx,ny=mv.gy+dy;mv.face=Math.atan2(dx,dy);idleT=0;
+if(g[ny][nx]){if(mv.bumpT<=0){sfx.bump();mv.bumpT=0.35;setExpr('surprise',0.45);if(Math.random()<0.35)nya.bump()}return}
+mv.fx=mv.gx;mv.fy=mv.gy;mv.tx=nx;mv.ty=ny;mv.gx=nx;mv.gy=ny;mv.t=0;hurt(STEP);sfx.step()}
+function tryUp(){if(busy())return;idleT=0;if(floorNo===4){showMsg('ここが最上階！');return}
+if(churu<=0){sfx.bump();setExpr('sad',0.8);showMsg('ちゅるるがない…');return}
+if(grids[floorNo+1][mv.gy][mv.gx]){sfx.bump();setExpr('surprise',0.5);showMsg('真上が壁で跳べない！');return}
+churu--;trans={t:0,d:1};sfx.up();nya.jump();setExpr('happy',1);burst(mv.gx,0.3,mv.gy,0xff5fa2,16);updateHUD()}
+function tryDown(){if(busy())return;idleT=0;if(floorNo===0){showMsg('ここが1階だよ');return}
+if(grids[floorNo-1][mv.gy][mv.gx]){sfx.bump();setExpr('surprise',0.5);showMsg('真下が壁で降りられない！');return}
+trans={t:0,d:-1};sfx.down();nya.down();setExpr('surprise',0.9);burst(mv.gx,0.3,mv.gy,0x6aa8ff,12)}
+function hurt(n){hp=Math.max(0,hp-n);updateHUD()}
+
+function arrive(){
+for(let i=items.length-1;i>=0;i--){const it=items[i];if(it.f!==floorNo||it.x!==mv.gx||it.y!==mv.gy)continue;
+scene.remove(it.mesh);items.splice(i,1);setExpr('happy',1.1);
+if(it.type==='can'){cans++;hp=Math.min(MAXHP,hp+20);sfx.can();nya.happy();burst(it.x,0.4,it.y,0xffd84a,18);showMsg('猫缶！ 体力+20')}
+else{churu+=it.amt;sfx.ch();nya.churu();burst(it.x,0.4,it.y,0xff5fa2,22);showMsg(`ちゅるる +${it.amt}`)}setFloorVis();updateHUD()}
+if(floorNo===4&&mv.gx===W-2&&mv.gy===W-2)finish(true)}
+
+function scoreOf(g){const fp=(maxFloor+1)*1000,gb=g?3000:0,tb=g?Math.max(0,5000-Math.floor(elapsed)*20):0;return{fp,gb,tb,total:fp+gb+tb+cans*100+churu*300}}
+function finish(g,title){if(state!=='play')return;state='end';const s=scoreOf(g);
+if(g){sfx.goal();nya.goal();setExpr('happy',99)}else{sfx.over();nya.sad();setExpr('sad',99)}
+if(g)for(let i=0;i<5;i++)setTimeout(()=>burst(W-2,0.5,W-2,[0x6affc8,0xffd84a,0xff5fa2,0xffffff,0x6aa8ff][i],20),i*150);
+lastEntry={name:($('name').value.trim()||'ななし').slice(0,10),score:s.total,floor:maxFloor+1,goal:g,time:elapsed.toFixed(1),cans,churu};
+ranking.push(lastEntry);ranking.sort((a,b)=>b.score-a.score);if(ranking.length>10)ranking.length=10;
+setTimeout(()=>{$('overTitle').textContent=g?'🎉 ゴール！':title;
+$('overText').innerHTML=`到達階 ${maxFloor+1}F → ${s.fp}<br>ゴール ${g?'達成 → 3000':'未達成 → 0'}<br>タイム ${elapsed.toFixed(1)}秒 → ボーナス ${s.tb}${g?'':'（ゴール時のみ）'}<br>猫缶 ${cans}個 × 100 = ${cans*100}<br>残りちゅるる ${churu}本 × 300 = ${churu*300}<br><b style="font-size:26px;color:#ffd84a">スコア ${s.total}</b>`;
+renderRank();$('over').classList.remove('hidden')},g?1500:900)}
+function renderRank(){const h=ranking.length?`<table><tr><th>順位</th><th>なまえ</th><th>スコア</th><th>到達</th><th>ゴール</th><th>タイム</th><th>🥫</th><th>🍡</th></tr>`+
+ranking.map((r,i)=>`<tr class="${r===lastEntry?'me':''}"><td>${['👑','🥈','🥉'][i]||i+1}</td><td>${r.name.replace(/[<>&"']/g,'')}</td><td>${r.score}</td><td>${r.floor}F</td><td>${r.goal?'🏁':'—'}</td><td>${r.time}s</td><td>${r.cans}</td><td>${r.churu}</td></tr>`).join('')+'</table>':'<p style="opacity:.7">まだランキングはありません</p>';
+$('rank1').innerHTML='<p style="margin-top:10px;color:#ffd84a">🏆 ランキング</p>'+h;$('rank2').innerHTML=$('rank1').innerHTML}
+let msgTO;function showMsg(t){const m=$('msg');m.textContent=t;m.style.display='block';clearTimeout(msgTO);msgTO=setTimeout(()=>m.style.display='none',1100)}
+function updateHUD(){$('hp').textContent=Math.ceil(hp);$('hpin').style.width=hp/MAXHP*100+'%';$('cans').textContent=cans;$('ch').textContent=churu;$('maxf').textContent=maxFloor+1}
+function startGame(){if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();ac.resume();
+build();state='play';nya.start();setExpr('happy',1);$('start').classList.add('hidden');$('over').classList.add('hidden');$('mapBox').classList.remove('hidden')}
+$('startBtn').onclick=startGame;$('retryBtn').onclick=startGame;
+
+function updateRobots(dt){for(const r of robots){
+if(r.t<1)r.t=Math.min(1,r.t+dt/0.45);
+if(r.t>=1){const g=grids[r.f];let opts=D4.filter(([dx,dy])=>!g[r.gy+dy][r.gx+dx]);
+if(opts.length>1)opts=opts.filter(([dx,dy])=>!(dx===-r.dx&&dy===-r.dy));
+const[dx,dy]=opts[Math.random()*opts.length|0];r.dx=dx;r.dy=dy;r.fx=r.gx;r.fy=r.gy;r.gx+=dx;r.gy+=dy;r.t=0}
+r.mesh.position.set(r.fx+(r.gx-r.fx)*r.t,Math.abs(Math.sin(anim*12))*0.05,r.fy+(r.gy-r.fy)*r.t);
+r.mesh.rotation.y=Math.atan2(r.dx,r.dy);
+if(state==='play'&&r.f===floorNo&&!trans&&invul<=0&&spinT<=0&&r.mesh.position.distanceTo(cat.position)<0.55){
+spinT=1;invul=2.2;hurt(STEP*2);sfx.hit();nya.hit();setExpr('hurt',1.6);burst(cat.position.x,0.5,cat.position.z,0xffffff,14);showMsg('目が回る〜！ 体力-'+STEP*2)}}}
+
+function updateFace(dt){exprT-=dt;mouthT-=dt;
+const e=spinT>0?'hurt':exprT>0?expr:hp<30&&state!=='title'?'sad':'normal';
+blinkT-=dt;if(blinkT<0)blinkT=2+Math.random()*3;
+for(const o of eyes){o.n.visible=e==='normal'||e==='surprise'||e==='sad';o.h.visible=e==='happy';o.x.visible=e==='hurt';o.brow.visible=e==='sad';
+const sz=e==='surprise'?1.25:1;o.eg.scale.set(sz,o.n.visible?(e==='sad'?0.7:blinkT<0.12?0.1:1)*sz:1,sz);
+o.pu.scale.set(e==='surprise'?0.018:0.03,e==='surprise'?0.035:0.06,0.02)}
+const open=mouthT>0||e==='surprise'||e==='hurt';oMouth.visible=open;wMouth.visible=!open;
+const ms=mouthT>0?0.8+Math.abs(Math.sin(anim*20))*0.5:1;oMouth.scale.set(0.04,0.035*ms,0.02);
+blush.forEach(b=>b.scale.set(e==='happy'?0.07:0.05,e==='happy'?0.04:0.03,0.02));
+sweat.visible=e==='sad'||e==='surprise';sweat.position.y=0.12-((anim*0.6)%1)*0.08;
+stars.visible=e==='hurt';stars.rotation.y=anim*8;
+ears.forEach(r=>r.rotation.z=r.userData.base*(e==='sad'?2.2:e==='surprise'?0.6:1))}
+
+const clock=new THREE.Clock();build();renderRank();$('mapBox').classList.add('hidden');
+const camTgt=new THREE.Vector3();
+function loop(){requestAnimationFrame(loop);
+const dt=Math.min(clock.getDelta(),0.05);
+if(state==='pause'){renderer.render(scene,camera);return}
+anim+=dt;
+if(state==='play'){elapsed+=dt;$('time').textContent=elapsed.toFixed(1);
+if(mv.t<1){mv.t=Math.min(1,mv.t+dt/0.16);if(mv.t>=1)arrive()}
+if(trans){const was=trans.t;trans.t+=dt/0.9;
+if(was<0.5&&trans.t>=0.5){floorNo+=trans.d;setFloorVis();burst(mv.gx,1.5,mv.gy,trans.d>0?0xff5fa2:0x6aa8ff,18);
+if(floorNo>maxFloor){maxFloor=floorNo;updateHUD();sfx.rec();showMsg(`到達階更新！ ${floorNo+1}F`)}else showMsg((floorNo+1)+'F')}
+if(trans.t>=1){trans=null;arrive()}}
+if(state==='play'&&hp<=0&&spinT<=0&&mv.t>=1&&!trans)finish(false,'体力切れ…');
+if(!busy()){const d=curDir();if(d)tryMove(d[0],d[1])}
+idleT+=dt;if(idleT>7&&state==='play'){idleT=0;nya.idle();setExpr(hp<30?'sad':'happy',0.9)}}
+mv.bumpT-=dt;invul-=dt;if(spinT>0)spinT-=dt;
+updateRobots(dt);updateFace(dt);
+const e=mv.t<0.5?2*mv.t*mv.t:1-Math.pow(-2*mv.t+2,2)/2;
+cat.position.x=mv.fx+(mv.tx-mv.fx)*e;cat.position.z=mv.fy+(mv.ty-mv.fy)*e;
+const hY=trans?Math.sin(Math.PI*trans.t)*4:0;catBody.position.y=hY+(mv.t<1?Math.sin(mv.t*Math.PI)*0.08:0);shadowDisc.visible=!trans;
+let dr=mv.face-cat.rotation.y;dr=Math.atan2(Math.sin(dr),Math.cos(dr));cat.rotation.y+=dr*Math.min(1,dt*15);
+catBody.rotation.x=trans?-Math.PI*2*trans.t:0;
+catBody.rotation.y=spinT>0?(1-spinT)*Math.PI*6:0;
+catBody.visible=!(invul>0&&spinT<=0&&Math.floor(anim*12)%2);
+legs.forEach((l,i)=>l.rotation.x=mv.t<1?Math.sin(anim*25+(i%2?Math.PI:0)*(i<2?1:-1))*0.6:0);
+tail.rotation.z=Math.sin(anim*(expr==='happy'&&exprT>0?10:3))*0.5;tail.rotation.x=Math.sin(anim*2)*0.2;head.rotation.y=Math.sin(anim*1.3)*0.15;head.rotation.z=Math.sin(anim*0.9)*0.08;
+for(const it of items){if(!it.mesh.visible)continue;it.mesh.rotation.y+=dt*2;it.mesh.position.y=0.4+Math.sin(anim*3+it.off)*0.08}
+for(const m of markers)m.mesh.scale.setScalar(1+Math.sin(anim*4)*0.12);
+goalRing.scale.setScalar(1+Math.sin(anim*4)*0.1);beam.material.opacity=0.15+Math.sin(anim*3)*0.06;
+for(const p of parts){if(p.life<=0)continue;p.life-=dt*1.5;p.v.y-=9*dt;p.m.position.addScaledVector(p.v,dt);p.m.material.opacity=Math.max(0,p.life);if(p.life<=0)p.m.visible=false}
+const cx=cat.position.x,cz=cat.position.z,title=state==='title';
+if(title)camTgt.set(W/2+Math.sin(anim*0.3)*W*0.6,W*0.9,W/2+Math.cos(anim*0.3)*W*0.6);else camTgt.set(cx,8+hY*0.5,cz+6);
+camera.position.lerp(camTgt,Math.min(1,dt*(title?1:4)));camera.lookAt(title?W/2:cx,0,title?W/2:cz);
+sun.position.set(cx+5,12,cz+4);sun.target.position.set(cx,0,cz);
+if(state!=='title')drawMap();
+renderer.render(scene,camera)}
+loop();
+</script>
+</body>
+</html>
